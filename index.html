@@ -1,0 +1,501 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>MEV Detector · Documentation</title>
+<meta name="description" content="Documentation for a smart-contract based framework for detecting MEV attacks using transaction behaviour analysis and risk scoring.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27%3E%3Crect width=%2732%27 height=%2732%27 rx=%277%27 fill=%27%23b4540a%27/%3E%3Ctext x=%2716%27 y=%2721%27 font-size=%2713%27 text-anchor=%27middle%27 fill=%27white%27 font-family=%27monospace%27 font-weight=%27700%27%3EMEV%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<aside class="rail" id="rail">
+  <div class="brand">
+    <b><span class="logo">MEV</span> MEV Detector Docs</b>
+    <small>Transaction behaviour analysis and risk scoring for Ethereum pending transactions</small>
+  </div>
+  <nav class="nav" id="nav">
+    <h6>Start</h6>
+    <a href="#overview"><i>01</i> Overview</a>
+    <a href="#quickstart"><i>02</i> Quick start</a>
+    <h6>Design</h6>
+    <a href="#architecture"><i>03</i> Architecture</a>
+    <a href="#rules"><i>04</i> Detection rules</a>
+    <a href="#scoring"><i>05</i> Risk scoring</a>
+    <a href="#contract"><i>06</i> Smart contract</a>
+    <h6>Evidence</h6>
+    <a href="#results"><i>07</i> Results</a>
+    <a href="#plots"><i>08</i> Result plots</a>
+    <a href="#limits"><i>09</i> Scope and limits</a>
+    <h6>Reference</h6>
+    <a href="#code"><i>10</i> Code map</a>
+    <a href="#faq"><i>11</i> FAQ</a>
+    <a href="#about"><i>12</i> About</a>
+  </nav>
+  <div class="rail-foot">Press <span class="kbd">Ctrl</span> <span class="kbd">K</span> to search</div>
+</aside>
+
+<header class="top">
+  <button class="btn burger" id="burger" aria-label="Menu">☰</button>
+  <div class="crumb" id="crumb"></div>
+  <button class="btn" id="searchBtn">Search <span class="kbd">Ctrl K</span></button>
+  <button class="btn" id="themeBtn" aria-label="Toggle theme">◐ Theme</button>
+</header>
+
+<main>
+<div id="pages">
+
+<!-- ============ OVERVIEW ============ -->
+<section class="page" id="p-overview" data-title="Overview">
+  <div class="hero">
+    <div class="eyebrow">M.Tech project · Amrita School of Computing</div>
+    <h1>A smart-contract based framework for detecting MEV attacks</h1>
+    <p class="lead">A prototype that watches live Ethereum pending transactions, applies eight behavioural rules to a rolling window and turns the result into an interpretable risk score from 0 to 100. The same rules are also written as a Solidity function.</p>
+    <div class="chips"><span class="chip">Python monitor</span><span class="chip">Solidity 0.8.24</span><span class="chip">Foundry tests</span><span class="chip">Rule based, no machine learning</span></div>
+  </div>
+
+  <h2 id="at-a-glance">At a glance</h2>
+  <div class="grid g4">
+    <div class="card stat"><b data-count="1900">1,900</b><span>live pending transactions analysed in 4 runs</span></div>
+    <div class="card stat"><b>0.53–0.73 ms</b><span>mean detection latency per transaction</span></div>
+    <div class="card stat"><b>8 + 1</b><span>behavioural rules and a gas-anomaly check</span></div>
+    <div class="card stat"><b>n = 20</b><span>transactions in the rolling window</span></div>
+  </div>
+
+  <h2 id="what">What it is</h2>
+  <p>Maximal extractable value (MEV) is the profit that whoever orders transactions in a block can make by including, excluding or reordering them. Front-running, back-running and sandwich attacks are the common forms. This project looks at the pending transactions in the mempool and asks which of them show the patterns that such attacks usually leave.</p>
+  <div class="grid g3">
+    <div class="card"><h4>Monitor</h4><p>A Python program subscribes to pending transactions through a WebSocket provider and normalises each one into a fixed record.</p></div>
+    <div class="card"><h4>Rules and score</h4><p>Eight rules and a gas-anomaly check run on a rolling window. A flag weight, a scenario severity and a gas term are added into one score.</p></div>
+    <div class="card"><h4>Contract</h4><p><code>BlockAnalyzer</code> expresses the same logic as a pure Solidity function that a caller can test with Foundry.</p></div>
+  </div>
+
+  <h2 id="what-not">What it is not</h2>
+  <div class="callout warn"><b>Read this first</b>
+    These points are properties of the work and are repeated on the Scope and limits page.
+    <ul>
+      <li>The rules look for <em>signals</em>. A pending transaction is not a mined one, and a higher gas price is not proof of an attack.</li>
+      <li>No labelled evaluation was done, so <strong>no accuracy, precision or recall is claimed</strong>.</li>
+      <li>The Solidity contract does not read the mempool. Nothing connects the live monitor to it.</li>
+      <li>The monitor does not block or reorder anything. The advisory message is only a label.</li>
+    </ul>
+  </div>
+
+  <h2 id="where">Where to go next</h2>
+  <div class="grid g2">
+    <a class="card" href="#quickstart"><h4>Run it →</h4><p>Set up the environment, run the monitor and the benchmark, and run the contract tests.</p></a>
+    <a class="card" href="#rules"><h4>Read the rules →</h4><p>Every rule with its condition, severity, cost and the function that implements it.</p></a>
+    <a class="card" href="#scoring"><h4>Try the score →</h4><p>An interactive calculator that follows the scoring code exactly.</p></a>
+    <a class="card" href="#results"><h4>See the results →</h4><p>Charts of latency, rule frequency and risk levels from the recorded runs.</p></a>
+  </div>
+</section>
+
+<!-- ============ QUICK START ============ -->
+<section class="page" id="p-quickstart" data-title="Quick start">
+  <div class="eyebrow">Get running</div>
+  <h1>Quick start</h1>
+  <p class="lead">You need Python 3, a WebSocket endpoint of an Ethereum node provider, and optionally Foundry for the contract tests.</p>
+
+  <h2 id="setup">1. Set up the project</h2>
+  <ol class="steps">
+    <li><b>Create a virtual environment</b> in the project folder and activate it.
+      <div class="codebox"><div class="codebar"><span class="t">terminal</span><button data-copy>Copy</button></div><pre>python -m venv .venv
+.venv\Scripts\activate        # Windows
+source .venv/bin/activate     # macOS / Linux</pre></div></li>
+    <li><b>Install the packages</b> that the scripts import.
+      <div class="codebox"><div class="codebar"><span class="t">terminal</span><button data-copy>Copy</button></div><pre>pip install websockets python-dotenv psutil matplotlib</pre></div>
+      <small><code>websockets</code> and <code>python-dotenv</code> are used by the monitor. <code>psutil</code> and <code>matplotlib</code> are used by the benchmark script. The small helper scripts also use <code>web3</code> and <code>eth-abi</code>.</small></li>
+    <li><b>Add your provider endpoint</b> to a <code>.env</code> file next to <code>live_monitor.py</code>. The monitor reads the variable <code>ALCHEMY_WS_URL</code>.
+      <div class="codebox"><div class="codebar"><span class="t">.env</span><button data-copy>Copy</button></div><pre>ALCHEMY_WS_URL=wss://YOUR-PROVIDER-ENDPOINT/YOUR-KEY</pre></div>
+      <div class="callout bad"><b>Keep the key private</b>Do not commit <code>.env</code> or put the key in a screenshot, a report or a repository. If a key was ever shared, create a new one in the provider dashboard and delete the old one.</div></li>
+  </ol>
+
+  <h2 id="run">2. Run the monitor</h2>
+  <div class="codebox"><div class="codebar"><span class="t">terminal</span><button data-copy>Copy</button></div><pre>python live_monitor.py</pre></div>
+  <p>The monitor subscribes to <code>alchemy_pendingTransactions</code> with full transaction objects. For every transaction it prints the rules that fired, the risk score, the level and the advisory message.</p>
+
+  <h2 id="bench">3. Reproduce the benchmark</h2>
+  <p><code>live_performance_evaluation.py</code> imports the monitor and runs four experiments of <strong>100, 300, 500 and 1000</strong> live transactions with the window set to 20. It writes the CSV files and plots into <code>results_live/transactions_N/</code>.</p>
+  <div class="codebox"><div class="codebar"><span class="t">terminal</span><button data-copy>Copy</button></div><pre>python live_performance_evaluation.py</pre></div>
+  <table><thead><tr><th>File</th><th>Content</th></tr></thead><tbody>
+    <tr><td><code>transaction_data.csv</code></td><td>One row per transaction: fields, signals fired, score, level, detection and end-to-end latency</td></tr>
+    <tr><td><code>detection_efficiency.csv</code></td><td>Mean, percentile and maximum time of each rule and of the scoring step</td></tr>
+    <tr><td><code>metrics.csv</code></td><td>Run level numbers such as elapsed time and throughput</td></tr>
+    <tr><td><code>performance_graphs/*.png</code></td><td>The plots shown on the Result plots page</td></tr>
+  </tbody></table>
+  <div class="callout"><b>Network traffic changes</b>The runs use whatever pending transactions arrive, so a new run gives different numbers. The recorded runs were made on 15 November 2026 between about 06:12 and 06:16 UTC.</div>
+
+  <h2 id="foundry">4. Run the contract tests</h2>
+  <div class="codebox"><div class="codebar"><span class="t">terminal</span><button data-copy>Copy</button></div><pre>cd foundry-project
+forge test -vv --gas-report</pre></div>
+  <p><code>test/BlockAnalyzer.t.sol</code> has nine tests: one for each of the eight rules and one for a normal block. The compiler is set to 0.8.24 with the optimizer on and <code>via_ir</code> enabled in <code>foundry.toml</code>.</p>
+  <div class="callout warn"><b>Test output not recorded</b>The pass or fail output of <code>forge test</code> was not captured in this work. Run it yourself and keep the output before you cite it.</div>
+</section>
+
+<!-- ============ ARCHITECTURE ============ -->
+<section class="page" id="p-architecture" data-title="Architecture">
+  <div class="eyebrow">Design</div>
+  <h1>Architecture</h1>
+  <p class="lead">One live path in Python and one separate, pure function in Solidity.</p>
+
+  <h2 id="flow">Data flow</h2>
+  <div class="chart" style="padding:20px 10px">
+  <svg viewBox="0 0 860 250" role="img" aria-label="Architecture diagram">
+    <defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0L10 5L0 10z" fill="currentColor" style="color:var(--muted)"/></marker></defs>
+    <g font-family="ui-monospace,Consolas,monospace" font-size="12">
+      <g><rect x="10" y="30" width="130" height="58" rx="10" fill="var(--panel2)" stroke="var(--line)"/><text x="75" y="55" text-anchor="middle" style="fill:var(--ink)">Node provider</text><text x="75" y="73" text-anchor="middle">WebSocket</text></g>
+      <g><rect x="180" y="30" width="130" height="58" rx="10" fill="var(--panel2)" stroke="var(--line)"/><text x="245" y="55" text-anchor="middle" style="fill:var(--ink)">Normalise</text><text x="245" y="73" text-anchor="middle">hex → numbers</text></g>
+      <g><rect x="350" y="30" width="130" height="58" rx="10" fill="var(--panel2)" stroke="var(--line)"/><text x="415" y="55" text-anchor="middle" style="fill:var(--ink)">Rolling window</text><text x="415" y="73" text-anchor="middle">last 20 tx</text></g>
+      <g><rect x="520" y="10" width="150" height="58" rx="10" fill="var(--accent-soft)" stroke="var(--accent)"/><text x="595" y="35" text-anchor="middle" style="fill:var(--accent)">Eight rules R1–R8</text><text x="595" y="53" text-anchor="middle">O(n), R8 is O(n³)</text></g>
+      <g><rect x="520" y="86" width="150" height="46" rx="10" fill="var(--panel2)" stroke="var(--line)"/><text x="595" y="114" text-anchor="middle" style="fill:var(--ink)">Gas-anomaly check</text></g>
+      <g><rect x="710" y="30" width="140" height="58" rx="10" fill="var(--panel2)" stroke="var(--line)"/><text x="780" y="55" text-anchor="middle" style="fill:var(--ink)">Risk score</text><text x="780" y="73" text-anchor="middle">level + message</text></g>
+      <g stroke="var(--muted)" stroke-width="1.6" fill="none" marker-end="url(#ar)" style="color:var(--muted)">
+        <path d="M140 59H178"/><path d="M310 59H348"/><path d="M480 59H500V39H518"/><path d="M480 59H500V109H518"/><path d="M670 39H690V59H708"/><path d="M670 109H690V59H708"/>
+      </g>
+      <g><rect x="350" y="170" width="260" height="62" rx="10" fill="none" stroke="var(--accent2)" stroke-dasharray="6 5"/><text x="480" y="196" text-anchor="middle" style="fill:var(--accent2)">BlockAnalyzer.sol (pure function)</text><text x="480" y="215" text-anchor="middle">same logic, caller supplies the list</text></g>
+    </g>
+  </svg>
+  <div class="sub" style="text-align:center">The dashed box is not on the live path. Nothing in the project feeds the live stream into it.</div></div>
+
+  <h2 id="stages">Stages</h2>
+  <div class="grid g2">
+    <div class="card"><h4>1 · Input</h4><p>The monitor asks the provider for pending transactions with full objects, not only hashes. Function: <code>normalize_transaction</code>.</p></div>
+    <div class="card"><h4>2 · Normalisation</h4><p>Hexadecimal quantities become integers. Value goes from wei to ETH and gas price from wei to gwei. A missing legacy gas price is skipped by R1, R6 and the gas-anomaly check.</p></div>
+    <div class="card"><h4>3 · Rolling window</h4><p>A <code>deque</code> with <code>maxlen=20</code>. The newest transaction is the last element and the oldest is dropped when the window is full.</p></div>
+    <div class="card"><h4>4 · Rules and score</h4><p>All rules run on every new transaction, whether or not they fire. <code>calculate_risk_score</code> combines their outputs.</p></div>
+  </div>
+
+  <h2 id="fields">Normalised fields</h2>
+  <div class="tw"><table><thead><tr><th>Field</th><th>Unit</th><th>Read by</th></tr></thead><tbody>
+    <tr><td><code>hash</code></td><td>hex string</td><td>Reporting</td></tr>
+    <tr><td><code>from_address</code></td><td>address</td><td>R4, R5, R8</td></tr>
+    <tr><td><code>to_address</code></td><td>address</td><td>Recorded only</td></tr>
+    <tr><td><code>value_eth</code></td><td>ETH</td><td>R2, R3, R7</td></tr>
+    <tr><td><code>gas_price_gwei</code></td><td>gwei</td><td>R1, R2, R3, R6, gas anomaly</td></tr>
+    <tr><td><code>gas_limit</code>, <code>nonce</code></td><td>integer</td><td>Recorded only</td></tr>
+    <tr><td><code>input</code></td><td>hex calldata</td><td>R5, R8</td></tr>
+    <tr><td><code>max_fee_per_gas_gwei</code>, <code>max_priority_fee_per_gas_gwei</code></td><td>gwei</td><td>Stored, not used</td></tr>
+  </tbody></table></div>
+
+  <h2 id="window">Why a window of 20</h2>
+  <p>The window bounds the work per transaction. Most rules read the window once, so their cost grows with its length. The sandwich rule tests ordered triples of positions, at most C(20,3) = 1,140 of them. The value 20 was a fixed design choice. No study of other window sizes was run.</p>
+</section>
+
+<!-- ============ RULES ============ -->
+<section class="page" id="p-rules" data-title="Detection rules">
+  <div class="eyebrow">Design</div>
+  <h1>Detection rules</h1>
+  <p class="lead">Eight rules and one extra check. Each returns true or false plus details used for reporting. The thresholds are constants in the code and none was calibrated on labelled data.</p>
+
+  <div class="callout"><b>Numbering</b>This portal follows the numbering of the code and the thesis: R1 gas reordering … R8 sandwich. The journal paper uses a different numbering, so check the IDs before comparing the two.</div>
+
+  <div class="rulebar"><input id="ruleFilter" placeholder="Filter rules: try “gas”, “sender”, “O(n³)”…" aria-label="Filter rules">
+    <button class="btn" id="expandAll">Expand all</button><button class="btn" id="collapseAll">Collapse all</button></div>
+  <div id="ruleList"></div>
+
+  <h2 id="extra">Gas-anomaly check</h2>
+  <p>Separate from R1–R8. With at least two positive gas prices in the window, it is true when the latest gas price is more than twice the mean positive gas price. It resembles R6 with a lower factor. It adds 10 points to the score but is <strong>not</strong> counted as one of the eight signals. Function: <code>calculate_gas_anomaly</code> / <code>calculateGasAnomaly</code>.</p>
+
+  <h2 id="interpret">Four things to remember when reading a signal</h2>
+  <div class="grid g2">
+    <div class="card"><h4>Adjacent pairs only</h4><p>R2, R3 and R5 read only the last two transactions. An attack with other transactions between its legs is not seen by them. R8 is the only rule that looks for a victim between two legs.</p></div>
+    <div class="card"><h4>Calldata equality is a proxy</h4><p>R5 and R8 compare raw calldata. They do not decode the token pair, the direction or the amount of a swap.</p></div>
+    <div class="card"><h4>R7 uses ETH value</h4><p>Many DEX swaps carry no ETH value, so R7 measures value concentration, not pool reserves or liquidity.</p></div>
+    <div class="card"><h4>Gas price is not proof</h4><p>R1, R2, R3 and R6 rest on gas-price differences, which are also caused by urgency. The results show how common they are in ordinary traffic.</p></div>
+  </div>
+
+  <h2 id="code-r1">Example: R1 in the code</h2>
+  <div class="codebox">
+    <div class="tabs" data-tabs><button class="on" data-t="py">Python</button><button data-t="sol">Solidity</button></div>
+    <div class="tabpane on" data-p="py"><pre><span class="k">def</span> <span class="f">detect_gas_reordering</span>(transactions):
+    gas_prices = [
+        tx[<span class="s">"gas_price_gwei"</span>] <span class="k">for</span> tx <span class="k">in</span> transactions
+        <span class="k">if</span> tx.get(<span class="s">"gas_price_gwei"</span>) <span class="k">is not None</span>
+        <span class="k">and</span> tx.get(<span class="s">"gas_price_gwei"</span>) &gt; 0
+    ]
+    <span class="k">if</span> len(gas_prices) &lt; 3:
+        <span class="k">return</span> False, None
+    min_gas = min(gas_prices)
+    max_gas = max(gas_prices)
+    threshold = min_gas * 3
+    <span class="k">if</span> max_gas &gt; threshold:
+        <span class="k">return</span> True, {<span class="s">"min_gas_gwei"</span>: min_gas, <span class="s">"max_gas_gwei"</span>: max_gas,
+                      <span class="s">"threshold_gwei"</span>: threshold}
+    <span class="k">return</span> False, None</pre></div>
+    <div class="tabpane" data-p="sol"><pre><span class="c">// Same rule in BlockAnalyzer.sol: checkReordering(Transaction[] memory txs)</span>
+<span class="c">// Zero gas prices are included in the sums on-chain; the function returns false</span>
+<span class="c">// when the minimum is zero (see the contract page for the differences).</span></pre></div>
+  </div>
+</section>
+
+<!-- ============ SCORING ============ -->
+<section class="page" id="p-scoring" data-title="Risk scoring">
+  <div class="eyebrow">Design</div>
+  <h1>Risk scoring</h1>
+  <p class="lead">One number from 0 to 100 that can be explained from its three parts.</p>
+
+  <h2 id="formula">Formula</h2>
+  <div class="codebox"><pre>S = min(100, w + s + a)
+
+w  flag weight           10 if c ≤ 1,  20 if 2 ≤ c ≤ 3,  30 if c ≥ 4     (c = rules fired among R1–R8)
+s  scenario severity     the first scenario that applies, tested in the order below
+a  gas-anomaly term      10 if the gas-anomaly check is true, otherwise 0</pre></div>
+
+  <div class="grid g2">
+    <table><thead><tr><th>Scenario (tested in order)</th><th class="n">s</th></tr></thead><tbody>
+      <tr><td>R8 sandwich pattern</td><td class="n">40</td></tr>
+      <tr><td>R2 front-run</td><td class="n">25</td></tr>
+      <tr><td>R6 sudden insertion</td><td class="n">20</td></tr>
+      <tr><td>R1 gas reordering</td><td class="n">15</td></tr>
+      <tr><td>R3 back-run</td><td class="n">15</td></tr>
+      <tr><td>R4 repeated transaction</td><td class="n">10</td></tr>
+      <tr><td>R5 direction reversal</td><td class="n">10</td></tr>
+      <tr><td>R7 liquidity impact</td><td class="n">10</td></tr>
+      <tr><td>No rule fires</td><td class="n">0</td></tr></tbody></table>
+    <table><thead><tr><th>Level</th><th>Score</th><th>Message</th></tr></thead><tbody>
+      <tr><td><span class="lvl LOW">LOW</span></td><td>S ≤ 34</td><td><code>[ALLOW]</code></td></tr>
+      <tr><td><span class="lvl MEDIUM">MEDIUM</span></td><td>35 ≤ S ≤ 69</td><td><code>[MONITOR]</code></td></tr>
+      <tr><td><span class="lvl HIGH">HIGH</span></td><td>S ≥ 70</td><td><code>[BLOCK]</code></td></tr></tbody></table>
+  </div>
+  <p class="muted">The message is a text label that follows from the level. The monitor does not block or reorder anything.</p>
+
+  <h2 id="calc">Try it</h2>
+  <p>Tick the rules that fire. The calculator follows <code>calculate_risk_score</code> in the Python monitor, including <code>w = 10</code> when no rule fires.</p>
+  <div class="calc">
+    <div>
+      <div class="checks" id="checks"></div>
+      <div class="checks" style="margin-top:8px"><label><input type="checkbox" id="gasAnom"> Gas-anomaly check true (+10)</label></div>
+    </div>
+    <div class="card">
+      <div><span class="score" id="scoreVal">10</span><span class="lvl LOW" id="scoreLvl">LOW</span></div>
+      <div class="gauge"><i id="gaugeMark" style="left:10%"></i></div>
+      <table style="margin:10px 0 0"><tbody>
+        <tr><td>Rules fired (c)</td><td class="n" id="cVal">0</td></tr>
+        <tr><td>Flag weight (w)</td><td class="n" id="wVal">10</td></tr>
+        <tr><td>Scenario (s)</td><td class="n"><span id="sName">Normal</span> · <span id="sVal">0</span></td></tr>
+        <tr><td>Gas anomaly (a)</td><td class="n" id="aVal">0</td></tr>
+      </tbody></table>
+      <p id="advice" class="muted" style="margin-bottom:0"></p>
+    </div>
+  </div>
+
+  <h2 id="facts">What the constants imply</h2>
+  <ul>
+    <li>The largest possible sum is 30 + 40 + 10 = <strong>80</strong>, so the cap of 100 is never reached and scores 81 to 100 cannot occur.</li>
+    <li>Without R8 the largest score is 30 + 25 + 10 = <strong>65</strong>, below 70. <strong>HIGH is reachable only when the sandwich rule fires.</strong></li>
+    <li>When R8 fires, HIGH needs c ≥ 4, or c = 2–3 together with the gas anomaly. R8 alone with the gas anomaly gives 60, which is MEDIUM.</li>
+    <li>With no signal the Python monitor gives w = 10, so the lowest recorded score is 10. The Solidity function gives w = 0.</li>
+  </ul>
+  <div class="callout"><b>Recorded data agree</b>In the 1,900 recorded transactions every score can be rebuilt as w + s + a. The highest score was 60, and no transaction reached HIGH because the sandwich rule never fired.</div>
+</section>
+
+<!-- ============ CONTRACT ============ -->
+<section class="page" id="p-contract" data-title="Smart contract">
+  <div class="eyebrow">Design</div>
+  <h1>The BlockAnalyzer contract</h1>
+  <p class="lead">A Solidity 0.8.24 contract with one external pure function. It shows that the rules and the score can be written as on-chain logic and tested.</p>
+
+  <h2 id="api">Interface</h2>
+  <div class="codebox"><div class="codebar"><span class="t">BlockAnalyzer.sol</span><button data-copy>Copy</button></div><pre><span class="k">struct</span> Transaction {
+    <span class="k">address</span> from;  <span class="k">address</span> to;
+    <span class="k">uint256</span> value; <span class="k">uint256</span> gasPrice; <span class="k">uint256</span> gasLimit; <span class="k">uint256</span> nonce;
+    <span class="k">bytes</span> data;
+}
+<span class="k">struct</span> ScenarioResult {
+    <span class="k">bool</span> isSuspicious; <span class="k">uint256</span> riskScore; <span class="k">string</span> riskLevel;
+    <span class="k">string</span> scenario;  <span class="k">string</span> recommendation; <span class="k">uint256</span> detectedSignals;
+}
+<span class="k">function</span> <span class="f">analyzeBlock</span>(Transaction[] <span class="k">memory</span> txs)
+    <span class="k">external pure returns</span> (ScenarioResult <span class="k">memory</span>);</pre></div>
+  <p>Inside, there is one function per rule (<code>checkReordering</code>, <code>checkFrontRun</code>, <code>checkBackRun</code>, <code>checkRepeatedTransactions</code>, <code>checkDirectionReversal</code>, <code>checkSuddenInsertion</code>, <code>checkLiquidityImpact</code>, <code>checkSandwich</code>), plus <code>calculateGasAnomaly</code>, <code>calculateFlagWeight</code>, <code>calculateScenarioSeverity</code>, <code>getRiskLevel</code> and <code>getRecommendation</code>. An empty array returns a score of 0 with the scenario “Empty Block”.</p>
+
+  <div class="callout bad"><b>What it does not do</b>The contract does not monitor the mempool, read blocks by itself, store detections, restrict addresses or block transactions. The caller must supply the transaction list. It is not a deployed on-chain defence.</div>
+
+  <h2 id="diff">Differences from the Python monitor</h2>
+  <div class="tw"><table><thead><tr><th>Aspect</th><th>Python monitor</th><th>Solidity function</th></tr></thead><tbody>
+    <tr><td>Window</td><td>Last 20 transactions, kept by the monitor</td><td>Whole array passed in, no limit</td></tr>
+    <tr><td>Flag weight with c = 0</td><td>10, so the lowest score is 10</td><td>0, so the lowest score is 0</td></tr>
+    <tr><td>Arithmetic</td><td>Floating point</td><td>Unsigned integers; 0.3·v is ⌊30v/100⌋, means are integer divisions</td></tr>
+    <tr><td>Zero or missing gas price</td><td>Skipped for the minimum and the mean (R1, R6, gas anomaly)</td><td>Included in the sums; R1, R6 and the gas anomaly return false if the minimum or mean is zero</td></tr>
+    <tr><td>Empty calldata</td><td>Empty string or <code>0x</code></td><td>Zero-length byte array</td></tr>
+    <tr><td>Input</td><td>Provider’s transaction object</td><td>Struct supplied by the caller</td></tr>
+  </tbody></table></div>
+
+  <h2 id="tests">Tests</h2>
+  <p>The Foundry file <code>test/BlockAnalyzer.t.sol</code> has nine tests:</p>
+  <div class="chips" style="margin-top:0"><span class="chip">test_GasReordering</span><span class="chip">test_FrontRun</span><span class="chip">test_BackRun</span><span class="chip">test_RepeatedTransaction</span><span class="chip">test_DirectionReversal</span><span class="chip">test_SuddenInsertion</span><span class="chip">test_LiquidityImpact</span><span class="chip">test_SandwichAttack</span><span class="chip">test_NormalBlock</span></div>
+</section>
+
+<!-- ============ RESULTS ============ -->
+<section class="page" id="p-results" data-title="Results">
+  <div class="eyebrow">Evidence</div>
+  <h1>Results</h1>
+  <p class="lead">Measured on 1,900 live pending transactions in four runs of 100, 300, 500 and 1,000 transactions, with the window set to 20. CPU and memory figures are left out on purpose.</p>
+  <div class="callout warn"><b>How to read these numbers</b>They describe one short stretch of traffic on one machine. They show cost and behaviour of the rules, not detection quality. No labelled attacks were available.</div>
+
+  <h2 id="latency">Detection latency</h2>
+  <div class="seg" id="latSeg"><button class="on" data-m="mean">Mean</button><button data-m="p95">95th percentile</button><button data-m="e2e">End-to-end mean</button></div>
+  <div class="chart"><h4 id="latTitle">Mean detection latency per run</h4><div class="sub">milliseconds per transaction</div><div id="latChart"></div></div>
+  <div class="tw"><table id="latTable"></table></div>
+  <p>The mean does not grow with the length of the run, because the window has a fixed length. End-to-end latency, which also includes parsing and the window update, is about 0.04 ms higher in every run.</p>
+
+  <h2 id="series">Latency of every transaction</h2>
+  <div class="chart"><h4>1,000-transaction run</h4><div class="sub">detection latency (ms) by transaction number</div><div id="seriesChart"></div></div>
+  <p>Latency starts low while the window fills and then stays in a band below about 1.3 ms with isolated higher points.</p>
+
+  <h2 id="fill">Latency against window fill</h2>
+  <div class="chart"><h4>Mean detection latency by number of transactions in the window</h4><div class="sub">pooled over the four runs; sizes below 20 occur only at the start of a run, so each has few samples</div><div id="fillChart"></div></div>
+
+  <h2 id="cost">Cost of each rule</h2>
+  <div class="chart"><h4>Mean time per call, 1,000-transaction run</h4><div class="sub">milliseconds, logarithmic axis</div><div id="costChart"></div></div>
+  <p>The sandwich rule takes <strong>0.652 ms</strong>, about <strong>91%</strong> of the summed per-component times, because it tests ordered triples. Every other component takes about 0.02 ms or less. A larger window would raise the cost sharply: a window of 40 has 9,880 triples, about 8.7 times the 1,140 of a window of 20. A window of 40 was not run.</p>
+
+  <h2 id="throughput">Throughput and arrival</h2>
+  <div class="chart"><h4>Throughput of each run</h4><div class="sub">transactions per second</div><div id="tpsChart"></div></div>
+  <p>Throughput was 5.1 to 10.8 tx/s. It is limited by how fast transactions arrive, not by the analysis: 88 to 91% of the gaps between consecutive transactions were under 10 ms, and 9 to 12% were over 100 ms. Transactions arrive in bursts of about eight, and the analysis used well under 1% of the elapsed time.</p>
+
+  <h2 id="firing">How often the rules fire</h2>
+  <div class="seg" id="fireSeg"></div>
+  <div class="chart"><h4 id="fireTitle">Share of transactions on which each rule fired</h4><div class="sub">percent of the transactions in the selected run</div><div id="fireChart"></div></div>
+  <ul>
+    <li><strong>R1 gas reordering</strong> fires on 92 to 99.6% of transactions. A window of 20 pending transactions almost always contains a spread of more than three times in gas price.</li>
+    <li><strong>R7 liquidity impact</strong> fires on 43 to 83%. Many pending transactions carry no ETH, and the rest are often unequal in value.</li>
+    <li>R2, R3, R4 and R6 fire occasionally. R5 is rare. <strong>R8 sandwich never fired.</strong></li>
+  </ul>
+
+  <h2 id="risk">Risk levels</h2>
+  <div class="chart"><h4>Share of transactions by level</h4><div class="sub">percent per run</div><div id="riskChart"></div><div class="legend"><span><i style="background:var(--ok)"></i>LOW</span><span><i style="background:var(--warn)"></i>MEDIUM</span><span><i style="background:var(--bad)"></i>HIGH (none)</span></div></div>
+  <p>MEDIUM was 78, 50, 54.2 and 59.1% of transactions. No transaction reached HIGH, and the highest score was 60. The two most frequent combinations were R1 alone (41.7%) and R1 with R7 (33.9%).</p>
+  <div class="tw"><table id="comboTable"></table></div>
+
+  <h2 id="ablation">What if the two frequent rules were removed</h2>
+  <p>Computed offline from the recorded data, by recomputing the score without a rule. The share of MEDIUM transactions falls from 57.4% to 16.3% without R1, to 25.2% without R7, and to 13.4% without both. The mean score falls from 32.5 to 15.3. HIGH stays at zero. This shows how much of the MEDIUM level comes from two rules that fire on ordinary traffic.</p>
+  <div class="chart"><h4>Share of MEDIUM transactions</h4><div class="sub">percent of the 1,900 recorded transactions</div><div id="ablChart"></div></div>
+</section>
+
+<!-- ============ PLOTS ============ -->
+<section class="page" id="p-plots" data-title="Result plots">
+  <div class="eyebrow">Evidence</div>
+  <h1>Result plots</h1>
+  <p class="lead">The plots written by <code>live_performance_evaluation.py</code> for each run, unchanged. Click a plot to enlarge it. CPU and memory plots are not included.</p>
+  <div class="seg" id="plotSeg"></div>
+  <div class="gallery" id="gallery"></div>
+  <p class="muted">Rule names in these plots are the monitor’s own names, in the order of the code.</p>
+</section>
+
+<!-- ============ LIMITS ============ -->
+<section class="page" id="p-limits" data-title="Scope and limits">
+  <div class="eyebrow">Evidence</div>
+  <h1>Scope and limits</h1>
+  <p class="lead">What the work shows, and what it does not.</p>
+  <div class="grid g2">
+    <div class="card"><h4><span class="tag t2">Shows</span></h4><p>The rules and the score can be implemented and run on a live stream at well under a millisecond per transaction on one machine.</p><p>The sandwich rule dominates the cost, and cost rises with window fill.</p><p>Gas-based rules fire on most ordinary pending traffic, so they separate little with the current thresholds.</p></div>
+    <div class="card"><h4><span class="tag bad">Does not show</span></h4><p>That the rules detect real attacks. No labelled data was used, so no accuracy, precision or recall exists.</p><p>That a flagged transaction was attacked, or that an unflagged one was safe.</p><p>That the result holds at other times, with other providers, or on other hardware.</p></div>
+  </div>
+
+  <h2 id="known">Known limits</h2>
+  <table><thead><tr><th>Limit</th><th>Consequence</th></tr></thead><tbody>
+    <tr><td>Pending is not mined</td><td>The order of pending transactions is not the order in which they are mined, so an observed order may not be the executed one.</td></tr>
+    <tr><td>Thresholds are not calibrated</td><td>The constants (3×, 2×, 30%, 50%) were fixed in the code, not chosen on data.</td></tr>
+    <tr><td>Calldata is not decoded</td><td>R5 and R8 cannot see token pair, direction or amount, and an attacker who changes calldata is not matched by R8.</td></tr>
+    <tr><td>R7 is value based</td><td>It does not use pool reserves, so it is not a liquidity model.</td></tr>
+    <tr><td>Two implementations</td><td>The monitor and the contract differ in the points on the contract page, so they can score the same list differently.</td></tr>
+    <tr><td>Bursty arrival</td><td>Throughput reflects the arrival pattern of the stream, not the capacity of the analysis.</td></tr>
+    <tr><td>Short runs</td><td>The four runs took about four minutes in total, on one day.</td></tr>
+  </tbody></table>
+
+  <h2 id="future">Future work</h2>
+  <ul>
+    <li>Evaluate the rules against a labelled dataset of known MEV transactions.</li>
+    <li>Calibrate the thresholds and the score on data.</li>
+    <li>Decode swap calldata so the rules use token pair, direction and amount.</li>
+    <li>Compare pending transactions with the mined block and receipt.</li>
+    <li>Replace the triple loop in the sandwich rule by a grouped pass so that a larger window is affordable.</li>
+    <li>Repeat the runs at different times and with more than one provider.</li>
+    <li>Align the Python monitor and the Solidity function in the points where they differ.</li>
+  </ul>
+</section>
+
+<!-- ============ CODE MAP ============ -->
+<section class="page" id="p-code" data-title="Code map">
+  <div class="eyebrow">Reference</div>
+  <h1>Code map</h1>
+  <p class="lead">Where things live in the project folder.</p>
+  <div class="tree"><span class="d">live-mev-detector/</span>
+├─ <b>live_monitor.py</b>                  <span class="x">the monitor: normalise, window, rules, score</span>
+├─ <b>live_performance_evaluation.py</b>   <span class="x">benchmark runs → results_live/</span>
+├─ decode_calldata.py                <span class="x">decodes a sample swap calldata (eth_abi)</span>
+├─ inspect_block.py                  <span class="x">prints transactions and receipts at chosen positions of one mined block (web3)</span>
+├─ test_historical_tx.py             <span class="x">fetches one historical transaction by hash (web3)</span>
+├─ live_monitor_step*_backup.py      <span class="x">earlier development versions</span>
+├─ <span class="d">solidity/</span>
+│  └─ BlockAnalyzer.sol              <span class="x">the contract</span>
+├─ <span class="d">foundry-project/</span>
+│  ├─ src/BlockAnalyzer.sol          <span class="x">contract used by the tests</span>
+│  ├─ test/BlockAnalyzer.t.sol       <span class="x">nine tests</span>
+│  └─ foundry.toml                   <span class="x">solc 0.8.24, optimizer, via_ir</span>
+├─ <span class="d">results_live/</span>
+│  └─ transactions_100 | 300 | 500 | 1000
+│     ├─ transaction_data.csv, detection_efficiency.csv, metrics.csv
+│     └─ performance_graphs/*.png
+└─ .env                              <span class="x">ALCHEMY_WS_URL (keep private)</span></div>
+
+  <h2 id="fn">Functions in live_monitor.py</h2>
+  <div class="tw"><table><thead><tr><th>Function</th><th>Role</th></tr></thead><tbody>
+    <tr><td><code>hex_to_int</code>, <code>wei_to_eth</code>, <code>wei_to_gwei</code></td><td>Unit conversion</td></tr>
+    <tr><td><code>normalize_transaction</code></td><td>Provider object → fixed record</td></tr>
+    <tr><td><code>detect_gas_reordering</code></td><td>R1</td></tr>
+    <tr><td><code>detect_front_run</code></td><td>R2</td></tr>
+    <tr><td><code>detect_back_run</code></td><td>R3</td></tr>
+    <tr><td><code>detect_repeated_transaction</code></td><td>R4</td></tr>
+    <tr><td><code>detect_direction_reversal</code></td><td>R5</td></tr>
+    <tr><td><code>detect_sudden_insertion</code></td><td>R6</td></tr>
+    <tr><td><code>detect_liquidity_impact</code></td><td>R7</td></tr>
+    <tr><td><code>detect_sandwich</code></td><td>R8</td></tr>
+    <tr><td><code>calculate_gas_anomaly</code></td><td>Gas-anomaly check</td></tr>
+    <tr><td><code>calculate_risk_score</code></td><td>Flag weight, severity, level, message</td></tr>
+  </tbody></table></div>
+  <p><code>TRANSACTION_BUFFER_SIZE = 20</code> sets the window length.</p>
+</section>
+
+<!-- ============ FAQ ============ -->
+<section class="page" id="p-faq" data-title="FAQ">
+  <div class="eyebrow">Reference</div>
+  <h1>Frequently asked questions</h1>
+  <details class="rule"><summary><h4>Is this machine learning?</h4></summary><div class="body"><p>No. Everything is fixed rules and fixed constants. There is no training and no learned weight.</p></div></details>
+  <details class="rule"><summary><h4>What is the accuracy?</h4></summary><div class="body"><p>It was not measured. Measuring it needs a labelled dataset of attack and normal transactions, which this work did not use. The results show latency and how often rules fire, not how often they are right.</p></div></details>
+  <details class="rule"><summary><h4>Why does the sandwich rule never fire?</h4></summary><div class="body"><p>R8 needs two transactions from one sender with identical non-empty calldata around a transaction from another sender, all inside a window of 20 pending transactions. That did not occur in the 1,900 recorded transactions. This is a result about this stream, not a proof that sandwiches do not occur.</p></div></details>
+  <details class="rule"><summary><h4>Why is no transaction rated HIGH?</h4></summary><div class="body"><p>HIGH needs a score of 70, and without R8 the largest possible score is 65. Since R8 never fired, HIGH could not occur.</p></div></details>
+  <details class="rule"><summary><h4>Why is R1 true for almost every transaction?</h4></summary><div class="body"><p>It needs only a maximum gas price above three times the minimum among three or more positive gas prices in the window. Pending traffic spans a wide range of gas prices, so this is usually true. It shows that the threshold does not separate much on this stream.</p></div></details>
+  <details class="rule"><summary><h4>Can the contract protect users on-chain?</h4></summary><div class="body"><p>Not as it stands. It is a pure function that scores a list given to it. It cannot read the mempool or stop a transaction.</p></div></details>
+  <details class="rule"><summary><h4>Why are CPU and memory not reported?</h4></summary><div class="body"><p>CPU was sampled once per transaction on a shared machine and is dominated by bursts of work, so it does not measure the cost of the method. The detection and end-to-end latencies are the reliable cost figures.</p></div></details>
+  <details class="rule"><summary><h4>The paper and the portal use different rule numbers</h4></summary><div class="body"><p>Yes. The code and thesis order the rules R1 gas reordering to R8 sandwich. The journal paper numbers them differently, for example sandwich as R1. Compare rules by name when you move between documents.</p></div></details>
+</section>
+
+<!-- ============ ABOUT ============ -->
+<section class="page" id="p-about" data-title="About">
+  <div class="eyebrow">Reference</div>
+  <h1>About</h1>
+  <div class="grid g2">
+    <div class="card"><h4>P. Sai Teja</h4><p>M.Tech student, Amrita School of Computing, Amrita Vishwa Vidyapeetham, Coimbatore.</p></div>
+    <div class="card"><h4>Dr. Uma J</h4><p>Guide, Amrita School of Computing, Amrita Vishwa Vidyapeetham, Coimbatore.</p></div>
+  </div>
+  <h2 id="docs">Related documents</h2>
+  <ul><li>M.Tech thesis: <em>A Smart Contract Based Framework for Detecting Maximal Extractable Value (MEV) Attacks Using Transaction Behaviour Analysis and Risk Scoring</em>.</li>
+      <li>Journal paper draft in the IET research journal format.</li></ul>
+  <div class="callout"><b>Writing assistance</b>An AI assistant helped prepare the thesis, the paper and this portal from the project’s code and recorded results. All numbers come from the project’s own CSV files.</div>
+  <footer>Documentation portal · static site, no build step, no external requests.</footer>
+</section>
+
+</div>
+<aside class="toc" id="toc"></aside>
+</main>
+
+<div class="pal" id="pal"><div class="pal-box"><input id="palIn" placeholder="Search the documentation…" autocomplete="off"><div class="pal-res" id="palRes"></div></div></div>
+<div class="lb" id="lb"><img alt=""></div>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
